@@ -49,8 +49,7 @@
 
 ### 1. Установка зависимостей
 
-pip install fastapi uvicorn 
-pip install sqlmodel psycopg2-binary
+pip install fastapi uvicorn sqlmodel psycopg2-binary
 
 ### 2. Клонирование репозитория
 

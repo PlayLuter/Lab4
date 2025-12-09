@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель Прокат Авто</title>
+    <style>
+        :root {
+            --bg-dark: #111315;
+            --sidebar-bg: #1a1d21;
+            --content-bg: #111315;
+            --card-bg: #1a1d21;
+            --text-primary: #ffffff;
+            --text-secondary: #8b929a;
+            --accent-blue: #2196f3;
+            --accent-hover: #1e88e5;
+            --border-color: #2c3036;
+            --th-bg: #1a1d21;
+            --modal-overlay: rgba(0, 0, 0, 0.8);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        .logo { font-size: 20px; font-weight: 800; margin-bottom: 40px; color: #fff; letter-spacing: 0.5px; }
+        .logo span { color: var(--accent-blue); }
+        
+        .menu-category { font-size: 10px; text-transform: uppercase; color: var(--text-secondary); margin-top: 24px; margin-bottom: 12px; font-weight: 700; letter-spacing: 1px; }
+        .menu-item { padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: #ccc; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .menu-item:hover { background-color: #2c3036; color: #fff; }
+        .menu-item.active { background-color: rgba(33, 150, 243, 0.15); color: var(--accent-blue); }
+
+        /* MAIN CONTENT */
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; background-color: var(--content-bg); }
+        .header-row { display: flex; justify-content: space-between; margin-bottom: 24px; align-items: center;}
+        h1 { font-size: 24px; font-weight: 700; margin: 0; }
+
+        /* BUTTONS */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background-color: var(--accent-blue); color: white; }
+        .btn-primary:hover { background-color: var(--accent-hover); box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3); }
+        
+        .action-btn {
+            width: 32px; height: 32px; background: #23272b; border: 1px solid #343a40; border-radius: 4px;
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s;
+            color: #8b929a; margin-left: 6px;
+        }
+        .action-btn:hover { border-color: #495057; background: #2c3036; }
+        .action-btn.view:hover { color: #ffffff; border-color: #fff; } /* New View Button Style */
+        .action-btn.edit:hover { color: var(--accent-blue); }
+        .action-btn.delete:hover { color: #f44336; }
+        .action-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
+        /* TABLE */
+        .table-wrapper { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background-color: #16191d; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; font-size: 11px; padding: 16px 20px; text-align: left; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); }
+        td { padding: 14px 20px; color: #e0e0e0; border-bottom: 1px solid #25282d; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background-color: #1f2227; }
+        .actions-cell { display: flex; justify-content: flex-end; }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--modal-overlay); display: none; justify-content: center; align-items: center; z-index: 999; backdrop-filter: blur(2px); }
+        .modal { background: #1a1d21; width: 450px; max-width: 90%; border-radius: 12px; padding: 30px; border: 1px solid #343a40; box-shadow: 0 20px 50px rgba(0,0,0,0.6); position: relative; }
+        .modal.large { width: 800px; max-height: 80vh; overflow-y: auto; } /* Large modal for details */
+        
+        .close-modal-btn { position: absolute; top: 20px; right: 20px; width: 30px; height: 30px; background: #23272b; border: 1px solid #343a40; color: #aaa; border-radius: 4px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: 0.2s; }
+        .close-modal-btn:hover { color: #fff; background: #2c3036; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 25px; color: #fff; }
+        .form-group { margin-bottom: 18px; }
+        .form-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; letter-spacing: 0.5px; }
+        .form-input { width: 100%; background: #111315; border: 1px solid #2c3036; color: #fff; padding: 12px; border-radius: 6px; box-sizing: border-box; font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .form-input:focus { border-color: var(--accent-blue); }
+
+        /* RELATIONS CARDS */
+        .relations-container { display: flex; flex-direction: column; gap: 20px; }
+        .relation-section-title { font-size: 12px; text-transform: uppercase; color: var(--accent-blue); font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .relation-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        .relation-card { background: #111315; border: 1px solid #2c3036; padding: 15px; border-radius: 8px; font-size: 12px; }
+        .relation-card div { margin-bottom: 4px; color: #ccc; }
+        .relation-card strong { color: #fff; }
+
+        /* STATUS BADGES */
+        .badge { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-block; }
+        .badge-green { background: rgba(76, 175, 80, 0.15); color: #66bb6a; }
+        .badge-blue { background: rgba(33, 150, 243, 0.15); color: #42a5f5; }
+        .badge-red { background: rgba(244, 67, 54, 0.15); color: #ef5350; }
+        .badge-gray { background: #2c3036; color: #8b929a; }
+        .id-cell { color: #555; font-family: monospace; font-size: 11px;}
+
+                /* Новые цвета для статусов сотрудников */
+        .badge-yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; }   /* В отпуске */
+        .badge-purple { background: rgba(156, 39, 176, 0.15); color: #ab47bc; } /* В декрете */
+        .badge-cyan { background: rgba(0, 188, 212, 0.15); color: #26c6da; }    /* На больничном */
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo">АВТО<span>ПРОКАТ</span></div>
+        <div class="menu-category">Автопарк</div>
+        <div class="menu-item active" onclick="loadPage('vehicles', 'Автомобили')">🚗 Автомобили</div>
+        <div class="menu-item" onclick="loadPage('models', 'Модели авто')">📚 Модели</div>
+        <div class="menu-item" onclick="loadPage('maintenance', 'ТО и Ремонт')">🔧 Ремонты</div>
+        <div class="menu-item" onclick="loadPage('insurance', 'Страховка')">🛡️ Полисы</div>
+        <div class="menu-category">CRM и Заказы</div>
+        <div class="menu-item" onclick="loadPage('clients', 'Клиенты')">👥 Клиенты</div>
+        <div class="menu-item" onclick="loadPage('orders', 'Заказы')">📝 Заказы</div>
+        <div class="menu-item" onclick="loadPage('reviews', 'Отзывы')">⭐ Отзывы</div>
+        <div class="menu-category">Финансы и Кадры</div>
+        <div class="menu-item" onclick="loadPage('payments', 'Платежи')">💰 Платежи</div>
+        <div class="menu-item" onclick="loadPage('fines', 'Штрафы')">👮 Штрафы</div>
+        <div class="menu-item" onclick="loadPage('employees', 'Сотрудники')">👔 Сотрудники</div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="header-row">
+            <h1 id="pageTitle">Автомобили</h1>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ ДОБАВИТЬ</button>
+        </div>
+        <div class="table-wrapper">
+            <table id="dataTable">
+                <thead id="tableHead"></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div id="loading" style="margin-top: 20px; text-align: center; color: #555; display: none;">Загрузка данных...</div>
+    </div>
+
+    <!-- EDIT/CREATE MODAL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <button class="close-modal-btn" onclick="closeModal()">✕</button>
+            <div class="modal-title" id="modalTitle">Создать запись</div>
+            <div id="modalFormBody"></div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 25px; gap: 10px;">
+                <button class="btn" style="background: #2c3036; color: white;" onclick="closeModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="saveItem()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RELATIONS MODAL (NEW) -->
+    <div class="modal-overlay" id="relationsModalOverlay">
+        <div class="modal large">
+            <button class="close-modal-btn" onclick="document.getElementById('relationsModalOverlay').style.display='none'">✕</button>
+            <div class="modal-title">Связанные записи</div>
+            <div id="relationsBody" class="relations-container">
+                <div style="text-align:center; color:#666">Загрузка связей...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let currentResource = 'vehicles';
+        let currentData = [];
+        let editId = null;
+        
+        // Сортировка
+        let sortCol = null;      // Текущая колонка сортировки
+        let sortAsc = true;      // Направление (true = A-Z, false = Z-A)
+
+        // ICONS
+        const ICON_EYE = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>`;
+        const ICON_EDIT = `<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>`;
+        const ICON_TRASH = `<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>`;
+
+        const FIELD_NAMES = { 'id': 'ID', 'model_id': 'ID Модели', 'vehicle_id': 'ID Авто', 'client_id': 'ID Клиента', 'employee_id': 'ID Сотр.', 'order_id': 'ID Заказа', 'brand': 'Марка', 'model_name': 'Модель', 'car_class': 'Класс', 'daily_rate': 'Цена/сутки', 'deposit_amount': 'Залог', 'license_plate': 'Госномер', 'vin_code': 'VIN код', 'color': 'Цвет', 'current_mileage': 'Пробег', 'status': 'Статус', 'full_name': 'ФИО', 'driver_license_num': 'В/У', 'passport_data': 'Паспорт', 'phone': 'Телефон', 'birth_date': 'Дата рожд.', 'rating': 'Рейтинг', 'is_blacklisted': 'ЧС', 'position': 'Должность', 'start_date': 'Начало', 'end_date_planned': 'План', 'end_date_actual': 'Факт', 'total_cost': 'Итого', 'payment_status': 'Оплата', 'deposit_returned': 'Залог возвр.', 'order_status': 'Статус заказа', 'amount': 'Сумма', 'payment_date': 'Дата', 'payment_type': 'Тип', 'method': 'Способ', 'violation_type': 'Нарушение', 'is_paid': 'Оплачено', 'issue_date': 'Дата', 'service_type': 'Вид работ', 'cost': 'Стоимость', 'description': 'Описание', 'end_date': 'Окончание', 'policy_number': '№ Полиса', 'insurance_company': 'Страховая', 'car_rating': 'Оц. авто', 'client_rating': 'Оц. клиента', 'comment': 'Коммент' };
+        const VAL_TRANS = { 
+            'Available': 'Доступен', 'Rented': 'В аренде', 'Maintenance': 'Ремонт', 
+            'Business': 'Бизнес', 'Economy': 'Эконом', 'Premium': 'Премиум', 'SUV': 'Внедорожник',
+            'Paid': 'Оплачен', 'Unpaid': 'Не оплачен', 'Partial': 'Частично', 
+            'Open': 'Открыт', 'Closed': 'Закрыт', 'Cancelled': 'Отменен', 
+            'Income': 'Приход', 'Refund': 'Возврат', 'Card': 'Карта', 'Cash': 'Наличные',
+            'Active': 'Работает', 'Fired': 'Уволен', 'Vacation': 'В отпуске', 'Sick': 'На больничном', 'Maternity': 'В декрете'
+        };
+
+        // RELATIONS CONFIG
+        // ПОЛНАЯ КАРТА СВЯЗЕЙ (DRILL-DOWN)
+        const RELATIONS_MAP = {
+            // --- РОДИТЕЛИ (Сверху вниз) ---
+            'vehicles': [
+                { type: 'child', resource: 'maintenance', fk: 'vehicle_id', title: 'История ремонтов' },
+                { type: 'child', resource: 'orders', fk: 'vehicle_id', title: 'История заказов' },
+                { type: 'child', resource: 'insurance', fk: 'vehicle_id', title: 'Страховые полисы' }
+            ],
+            'models': [ { type: 'child', resource: 'vehicles', fk: 'model_id', title: 'Автомобили' } ],
+            'clients': [ { type: 'child', resource: 'orders', fk: 'client_id', title: 'Заказы' } ],
+            'employees': [ { type: 'child', resource: 'orders', fk: 'employee_id', title: 'Заказы' } ],
+            'orders': [
+                { type: 'child', resource: 'payments', fk: 'order_id', title: 'Платежи' },
+                { type: 'child', resource: 'fines', fk: 'order_id', title: 'Штрафы' },
+                { type: 'child', resource: 'reviews', fk: 'order_id', title: 'Отзывы' },
+                { type: 'parent', resource: 'vehicles', local_fk: 'vehicle_id', title: 'Автомобиль' },
+                { type: 'parent', resource: 'clients', local_fk: 'client_id', title: 'Клиент' }
+            ],
+            
+            // --- ДЕТИ (Снизу вверх) ---
+            'maintenance': [ { type: 'parent', resource: 'vehicles', local_fk: 'vehicle_id', title: 'Связанный автомобиль' } ],
+            'insurance':   [ { type: 'parent', resource: 'vehicles', local_fk: 'vehicle_id', title: 'Связанный автомобиль' } ],
+            'reviews':     [ { type: 'parent', resource: 'orders', local_fk: 'order_id', title: 'Заказ' } ],
+            'payments':    [ { type: 'parent', resource: 'orders', local_fk: 'order_id', title: 'Заказ' } ],
+            'fines':       [ { type: 'parent', resource: 'orders', local_fk: 'order_id', title: 'Заказ' } ]
+        };
+
+
+
+
+        async function loadPage(resource, title) {
+            currentResource = resource;
+            sortCol = null; // Сброс сортировки при смене страницы
+            document.getElementById('pageTitle').innerText = title;
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            fetchData();
+        }
+
+        async function fetchData() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const response = await fetch(`${API_URL}/${currentResource}/`);
+                currentData = await response.json();
+                document.getElementById('loading').style.display = 'none';
+                renderTable(currentData);
+            } catch (err) {
+                document.getElementById('loading').innerText = "Ошибка подключения к API";
+            }
+        }
+
+        // --- СОРТИРОВКА ---
+        function sortTable(key) {
+            // Если кликнули по той же колонке - меняем направление, иначе - новая колонка по возрастанию
+            if (sortCol === key) {
+                sortAsc = !sortAsc;
+            } else {
+                sortCol = key;
+                sortAsc = true;
+            }
+
+            // Сортируем currentData
+            currentData.sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+
+                // Обработка null
+                if (valA === null) valA = "";
+                if (valB === null) valB = "";
+
+                // Если это строки, приводим к нижнему регистру для корректного сравнения
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            renderTable(currentData);
+        }
+
+        function formatValue(key, val) {
+            if (val === null || val === undefined) return '<span style="color:#444">-</span>';
+            if (typeof val === 'string' && val.includes('T')) {
+                 const date = new Date(val);
+                 if (!isNaN(date.getTime())) return val.replace('T', ' ').substring(0, 16);
+            }
+            if (['status', 'order_status', 'payment_status', 'payment_type'].includes(key)) {
+                let color = 'badge-gray';
+                if (['Available', 'Paid', 'Closed', 'Income', 'Active', 'Completed'].includes(val)) color = 'badge-green';
+                if (['Rented', 'Partial', 'Open'].includes(val)) color = 'badge-blue';
+                if (['Maintenance', 'Unpaid', 'Refund', 'Cancelled', 'Fired'].includes(val)) color = 'badge-red';
+                if (val === 'Vacation') color = 'badge-yellow';
+                if (val === 'Maternity') color = 'badge-purple';
+                if (val === 'Sick') color = 'badge-cyan';
+
+                return `<span class="badge ${color}">${VAL_TRANS[val] || val}</span>`;
+            }
+            if (VAL_TRANS[val]) return VAL_TRANS[val];
+            if (typeof val === 'boolean') return val ? '<span style="color:#4caf50">Да</span>' : '<span style="color:#555">Нет</span>';
+            if (key === 'id' || key.endsWith('_id')) return `<span class="id-cell">${val}</span>`;
+            return val;
+        }
+
+        function renderTable(data) {
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+            thead.innerHTML = ""; tbody.innerHTML = "";
+            if (data.length === 0) { tbody.innerHTML = `<tr><td colspan="100" style="text-align:center; padding: 40px; color: #555">Нет записей</td></tr>`; return; }
+            
+            const keys = Object.keys(data[0]);
+            let headerHTML = "<tr>";
+            
+            keys.forEach(k => {
+                // Добавляем стрелочку если колонка активна
+                let arrow = "";
+                if (sortCol === k) {
+                    arrow = sortAsc ? " ▲" : " ▼";
+                }
+                // Добавляем onclick и стиль курсора
+                headerHTML += `<th onclick="sortTable('${k}')" style="cursor:pointer; user-select:none;">
+                                ${FIELD_NAMES[k] || k} <span style="font-size:10px; color:#666">${arrow}</span>
+                               </th>`;
+            });
+            
+            headerHTML += "<th style='text-align:right'>ДЕЙСТВИЯ</th></tr>";
+            thead.innerHTML = headerHTML;
+
+            data.forEach(item => {
+                let rowHTML = "<tr>";
+                keys.forEach(key => { rowHTML += `<td>${formatValue(key, item[key])}</td>`; });
+                
+                const hasRelations = RELATIONS_MAP[currentResource];
+                const eyeBtn = hasRelations ? `<div class="action-btn view" onclick="openRelationsModal(${item.id})" title="Связи">${ICON_EYE}</div>` : '';
+
+                rowHTML += `
+                    <td class="actions-cell">
+                        ${eyeBtn}
+                        <div class="action-btn edit" onclick="openEditModal(${item.id})" title="Редактировать">${ICON_EDIT}</div>
+                        <div class="action-btn delete" onclick="deleteItem(${item.id})" title="Удалить">${ICON_TRASH}</div>
+                    </td>
+                </tr>`;
+                tbody.innerHTML += rowHTML;
+            });
+        }
+
+        // --- RELATIONS MODAL ---
+                async function openRelationsModal(id) {
+            const modal = document.getElementById('relationsModalOverlay');
+            const container = document.getElementById('relationsBody');
+            modal.style.display = 'flex';
+            container.innerHTML = '<div style="text-align:center; padding:20px">Загрузка...</div>';
+
+            const relationsConfig = RELATIONS_MAP[currentResource];
+            if (!relationsConfig) return;
+
+            // Находим текущую запись в памяти, чтобы прочитать её FK поля (например vehicle_id)
+            const currentItem = currentData.find(x => x.id === id);
+            if (!currentItem) { container.innerText = "Ошибка: запись не найдена"; return; }
+
+            let htmlContent = "";
+
+            for (const rel of relationsConfig) {
+                try {
+                    // Запрашиваем данные из связанной таблицы
+                    const response = await fetch(`${API_URL}/${rel.resource}/`);
+                    const allExternalItems = await response.json();
+                    let relatedItems = [];
+
+                    if (rel.type === 'child') {
+                        // Логика "Дети": Ищем там записи, у которых fk == наш ID
+                        relatedItems = allExternalItems.filter(x => x[rel.fk] === id);
+                    } else if (rel.type === 'parent') {
+                        // Логика "Родитель": Ищем там одну запись, чей ID == наш local_fk (например vehicle_id)
+                        const parentId = currentItem[rel.local_fk]; // Например, 5
+                        if (parentId) {
+                            const parentItem = allExternalItems.find(x => x.id === parentId);
+                            if (parentItem) relatedItems.push(parentItem);
+                        }
+                    }
+
+                    if (relatedItems.length > 0) {
+                        htmlContent += `<div class="relation-section-title">${rel.title}</div>`;
+                        htmlContent += `<div class="relation-cards-grid">`;
+                        
+                        relatedItems.forEach(item => {
+                            let cardContent = "";
+                            // Показываем первые 5 полей, кроме ID
+                            let count = 0;
+                            Object.keys(item).forEach(k => {
+                                if (k !== 'id' && !k.includes('_id') && count < 5) {
+                                    let val = formatValue(k, item[k]); // Используем нашу функцию форматирования!
+                                    // Убираем HTML теги для карточки, если они слишком сложные, или оставляем
+                                    // Для простоты оставим как есть, бейджи будут работать
+                                    cardContent += `<div style="margin-bottom:4px"><strong style="color:#ccc">${FIELD_NAMES[k]||k}:</strong> ${val}</div>`;
+                                    count++;
+                                }
+                            });
+                            htmlContent += `<div class="relation-card">${cardContent}</div>`;
+                        });
+                        htmlContent += `</div><br>`;
+                    }
+                } catch (e) { console.error(e); }
+            }
+
+            if (htmlContent === "") container.innerHTML = '<div style="text-align:center; padding:20px; color:#666">Нет связанных записей</div>';
+            else container.innerHTML = htmlContent;
+        }
+
+
+        // --- FORMS & CRUD ---
+        const SCHEMA = {
+            'vehicles': { 'model_id': 'number', 'license_plate': 'text', 'vin_code': 'text', 'color': 'text', 'current_mileage': 'number', 'status': ['Available', 'Rented', 'Maintenance'] },
+            'models': { 'brand': 'text', 'model_name': 'text', 'car_class': 'text', 'daily_rate': 'number', 'deposit_amount': 'number' },
+            'clients': { 'full_name': 'text', 'driver_license_num': 'text', 'passport_data': 'text', 'phone': 'text', 'birth_date': 'date', 'rating': 'number', 'is_blacklisted': 'boolean' },
+            'orders': { 'client_id': 'number', 'vehicle_id': 'number', 'employee_id': 'number', 'start_date': 'datetime-local', 'end_date_planned': 'datetime-local', 'end_date_actual': 'datetime-local', 'total_cost': 'number', 'payment_status': ['Unpaid', 'Partial', 'Paid'], 'deposit_returned': 'boolean', 'order_status': ['Open', 'Closed', 'Cancelled'] },
+            'employees': { 'full_name': 'text', 'position': 'text', 'status': ['Active', 'Fired', 'Vacation', 'Sick', 'Maternity'] },
+            'payments': { 'order_id': 'number', 'amount': 'number', 'payment_date': 'datetime-local', 'payment_type': ['Income', 'Refund'], 'method': ['Card', 'Cash'] },
+            'fines': { 'order_id': 'number', 'violation_type': 'text', 'amount': 'number', 'is_paid': 'boolean', 'issue_date': 'date' },
+            'maintenance': { 'vehicle_id': 'number', 'service_type': 'text', 'cost': 'number', 'start_date': 'date', 'end_date': 'date', 'description': 'text' },
+            'insurance': { 'vehicle_id': 'number', 'policy_number': 'text', 'insurance_company': 'text', 'start_date': 'date', 'end_date': 'date', 'cost': 'number' },
+            'reviews': { 'order_id': 'number', 'car_rating': 'number', 'client_rating': 'number', 'comment': 'text' }
+        };
+
+        function openCreateModal() { editId = null; document.getElementById('modalTitle').innerText = "Новая запись"; generateForm(null); document.getElementById('modalOverlay').style.display = 'flex'; }
+        function openEditModal(id) { editId = id; document.getElementById('modalTitle').innerText = `Редактирование #${id}`; const item = currentData.find(x => x.id === id); generateForm(item); document.getElementById('modalOverlay').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+        function generateForm(data) {
+            const fields = SCHEMA[currentResource];
+            const container = document.getElementById('modalFormBody');
+            container.innerHTML = "";
+            if (!fields) return;
+            Object.keys(fields).forEach(key => {
+                const type = fields[key];
+                const val = data ? data[key] : '';
+                const label = FIELD_NAMES[key] || key;
+                let inputHTML = "";
+                if (Array.isArray(type)) {
+                    let options = type.map(opt => `<option value="${opt}" ${val === opt ? 'selected' : ''}>${VAL_TRANS[opt] || opt}</option>`).join('');
+                    inputHTML = `<select class="form-input" id="input_${key}">${options}</select>`;
+                } else if (type === 'boolean') {
+                    inputHTML = `<select class="form-input" id="input_${key}"><option value="false" ${val === false ? 'selected' : ''}>Нет</option><option value="true" ${val === true ? 'selected' : ''}>Да</option></select>`;
+                } else {
+                    let displayVal = val;
+                    if(type === 'datetime-local' && val && typeof val === 'string') displayVal = val.slice(0,16);
+                    inputHTML = `<input type="${type}" class="form-input" id="input_${key}" value="${displayVal || ''}">`;
+                }
+                container.innerHTML += `<div class="form-group"><label class="form-label">${label}</label>${inputHTML}</div>`;
+            });
+        }
+
+        async function saveItem() {
+            const fields = SCHEMA[currentResource];
+            const payload = {};
+            Object.keys(fields).forEach(key => {
+                const el = document.getElementById(`input_${key}`);
+                let val = el.value;
+                if (fields[key] === 'boolean') val = (val === 'true');
+                if (fields[key] === 'number') val = Number(val);
+                payload[key] = val;
+            });
+            const method = editId ? 'PUT' : 'POST';
+            const url = editId ? `${API_URL}/${currentResource}/${editId}` : `${API_URL}/${currentResource}/`;
+            try { await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); closeModal(); fetchData(); } catch (e) { alert("Ошибка сохранения"); }
+        }
+
+        async function deleteItem(id) {
+            if(!confirm("Вы уверены, что хотите удалить эту запись?")) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/${currentResource}/${id}`, { method: 'DELETE' });
+                
+                if (response.ok) {
+                    // Успех
+                    fetchData(); // Обновляем таблицу
+                } else {
+                    // Ошибка от сервера (например, 400 Bad Request)
+                    const errorData = await response.json();
+                    // FastAPI возвращает ошибку в поле "detail"
+                    const errorMessage = errorData.detail || "Неизвестная ошибка сервера";
+                    alert("Ошибка удаления:\n" + errorMessage);
+                }
+            } catch (e) {
+                // Ошибка сети (сервер недоступен и т.д.)
+                console.error(e);
+                alert("Ошибка сети. Проверьте подключение к серверу.");
+            }
+        }
+
+    </script>
+</body>
+</html>
